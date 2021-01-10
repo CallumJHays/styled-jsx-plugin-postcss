@@ -122,7 +122,6 @@ describe("styled-jsx-plugin-postcss", () => {
     };
     plugin(scssFixture, {
       path: path.resolve("fixture-nextjs-warning-info"),
-      deasync: true,
     });
     assert(warned);
     console.warn = oldWarn;
