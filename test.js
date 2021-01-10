@@ -127,4 +127,22 @@ describe("styled-jsx-plugin-postcss", () => {
     assert(warned);
     console.warn = oldWarn;
   });
+
+  it("Only displays a warning when unsupported field is present in postcss.config but not in plugin opts", () => {
+    const oldWarn = console.warn;
+    let warned = false;
+    console.warn = (err) => {
+      if (err === NEXTJS_UNSUPPORTED_FIELD_WARNING) {
+        warned = true;
+      }
+    };
+
+    plugin(scssFixture);
+    plugin(scssFixture, {
+      path: path.resolve("fixture-nextjs-warning-info"),
+      parser: "postcss-scss",
+    });
+    assert(!warned);
+    console.warn = oldWarn;
+  });
 });

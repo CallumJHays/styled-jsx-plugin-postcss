@@ -11,10 +11,11 @@ const NEXTJS_UNSUPPORTED_FIELD_WARNING = `[styled-jsx-plugin-postcss]: Looks lik
 let plugins;
 let _processor;
 
-function maybeNextJsWarningInfo(processOptions, pluginsInfo) {
+function maybeNextJsWarningInfo(pluginProcessOptions, processOptions) {
   let anyConfigProcessOptions = false;
-  for (const key in pluginsInfo.options) {
-    if (!(key in processOptions)) {
+
+  for (const key in processOptions) {
+    if (!(key in pluginProcessOptions)) {
       anyConfigProcessOptions = true;
       break;
     }
@@ -43,8 +44,11 @@ function processor(src, options) {
       }
     ).then((pluginsInfo) => {
       plugins = pluginsInfo.plugins || [];
-      maybeWarning = maybeNextJsWarningInfo(processOptions, pluginsInfo);
-      processOptions = pluginsInfo.options;
+      const { cwd, env, ...processOptions } = pluginsInfo.options;
+      maybeWarning = maybeNextJsWarningInfo(
+        pluginProcessOptions,
+        processOptions
+      );
     });
   } else {
     loaderPromise = Promise.resolve();
