@@ -1,6 +1,8 @@
 const assert = require("assert");
 const path = require("path");
+
 const plugin = require("./");
+const { NEXTJS_UNSUPPORTED_FIELD_WARNING } = require("./processor");
 
 describe("styled-jsx-plugin-postcss", () => {
   it("applies browser list and preset-env features", () => {
@@ -71,5 +73,55 @@ describe("styled-jsx-plugin-postcss", () => {
         message: /postcss failed with TypeError: Invalid PostCSS Plugin found at: plugins\[0]/,
       }
     );
+  });
+
+  it("Works in deasyncMode", () => {
+    assert.strictEqual(
+      plugin(
+        "p { color: color-mod(red alpha(90%)); & img { display: block } }",
+        { deasync: true }
+      ),
+      "p { color: rgba(255, 0, 0, 0.9) }\np img { display: block }"
+    );
+  });
+
+  const scssFixture = `p { color: red; font-family: 'Times New Roman'; }
+  // test postcss-scss
+  h { background: red; }`;
+
+  it("Works with `syntax`", () => {
+    assert.doesNotThrow(() => {
+      plugin(scssFixture, {
+        syntax: "postcss-scss",
+      });
+    });
+  });
+
+  it("Works with `parser`", () => {
+    assert.doesNotThrow(() => {
+      plugin(scssFixture, {
+        parser: "postcss-scss",
+      });
+    });
+  });
+
+  it("Works with `stringifier`", () => {
+    assert.doesNotThrow(() => {
+      plugin(scssFixture, {
+        stringifier: "postcss-scss",
+      });
+    });
+  });
+
+  it("Displays ProcessOptions usage information if encountering NextJS Unsupported Field", () => {
+    const oldWarn = console.warn;
+    console.warn = (msg) => {
+      console.log(msg);
+      assert.strictEqual(msg, "poo");
+    };
+    plugin(scssFixture, {
+      path: path.resolve("fixture-nextjs-warning-info"),
+    });
+    console.warn = oldWarn;
   });
 });
