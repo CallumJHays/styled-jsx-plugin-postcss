@@ -115,13 +115,16 @@ describe("styled-jsx-plugin-postcss", () => {
 
   it("Displays ProcessOptions usage information if encountering NextJS Unsupported Field", () => {
     const oldWarn = console.warn;
+    let warned = false;
     console.warn = (msg) => {
-      console.log(msg);
-      assert.strictEqual(msg, "poo");
+      assert.strictEqual(msg, NEXTJS_UNSUPPORTED_FIELD_WARNING);
+      warned = true;
     };
     plugin(scssFixture, {
       path: path.resolve("fixture-nextjs-warning-info"),
+      deasync: true,
     });
+    assert(warned);
     console.warn = oldWarn;
   });
 });

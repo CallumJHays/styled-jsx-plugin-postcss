@@ -1,4 +1,5 @@
+const path = require("path");
+
 module.exports = {
-  syntax: "postcss-scss",
-  plugins: [],
+  parser: "postcss-scss",
 };

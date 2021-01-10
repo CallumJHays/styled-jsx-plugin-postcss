@@ -43,8 +43,8 @@ function processor(src, options) {
       }
     ).then((pluginsInfo) => {
       plugins = pluginsInfo.plugins || [];
-      processOptions = pluginsInfo.options;
       maybeWarning = maybeNextJsWarningInfo(processOptions, pluginsInfo);
+      processOptions = pluginsInfo.options;
     });
   } else {
     loaderPromise = Promise.resolve();
