@@ -3,16 +3,46 @@ const path = require("path");
 const crypto = require("crypto");
 const fs = require("fs");
 
-module.exports = function styledJsxPostcssPlugin(css, settings = {}) {
-  let cacheFile;
-  if (settings.cacheDir) {
-    cacheFile = path.join(
-      settings.cacheDir,
-      crypto.createHash("md5").update(css).digest("hex")
-    );
+// (filename) => (hash) => output;
+const cache = {};
 
-    if (!fs.existsSync(settings.cacheDir)) {
-      fs.mkdir(settings.cacheDir, () => {});
+module.exports = function styledJsxPostcssPlugin(
+  css,
+  settings = { cacheDir: null, cacheMem: false }
+) {
+  const {
+    cacheDir,
+    cacheMem,
+    deasync,
+    babel: _,
+    ...processorOptions
+  } = settings;
+  let hash;
+  if (cacheDir || cacheMem) {
+    hash = crypto.createHash("md5").update(css).digest("hex");
+  }
+
+  // memcache
+  let memCache;
+  if (cacheMem) {
+    if (settings.babel.filename in cache) {
+      memCache = cache[settings.babel.filename];
+
+      if (memCache && hash in memCache) {
+        return memCache[hash];
+      }
+    } else {
+      memCache = cache[settings.babel.filename] = {};
+    }
+  }
+
+  // filecache
+  let cacheFile;
+  if (cacheDir) {
+    cacheFile = path.join(cacheDir, hash);
+
+    if (!fs.existsSync(cacheDir)) {
+      fs.mkdir(cacheDir, () => {});
     } else if (fs.existsSync(cacheFile)) {
       return fs.readFileSync(cacheFile, "utf8");
     }
@@ -24,11 +54,11 @@ module.exports = function styledJsxPostcssPlugin(css, settings = {}) {
   );
 
   let output;
-  if (settings.deasync) {
+  if (deasync) {
     const deasyncPromise = require("deasync-promise");
     const { processor } = require("./processor");
 
-    output = deasyncPromise(processor(cssWithPlaceholders, settings));
+    output = deasyncPromise(processor(cssWithPlaceholders, processorOptions));
   } else {
     const result = spawnSync(
       "node",
@@ -36,7 +66,7 @@ module.exports = function styledJsxPostcssPlugin(css, settings = {}) {
       {
         input: JSON.stringify({
           css: cssWithPlaceholders,
-          settings,
+          settings: processorOptions,
         }),
         encoding: "utf8",
       }
@@ -73,7 +103,13 @@ module.exports = function styledJsxPostcssPlugin(css, settings = {}) {
     (_, id) => `%%styled-jsx-placeholder-${id}%%`
   );
 
-  if (cacheFile) {
+  if (memCache) {
+    if (Object.keys(memCache) > 5) {
+      // clear the cache to prevent memory leak
+      memCache = {};
+    }
+    memCache[hash] = pluginOutput;
+  } else if (cacheFile) {
     fs.writeFileSync(cacheFile, pluginOutput);
   }
 

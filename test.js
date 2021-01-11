@@ -146,7 +146,8 @@ describe("styled-jsx-plugin-postcss", () => {
     assert(!warned);
     console.warn = oldWarn;
   });
-  it("caches files when cacheDir option is provided", () => {
+
+  it("perf increase when cacheDir option is provided", () => {
     const input = '@import "./fixture.css"; p { color: red }';
     const expected = "div { color: red; } p { color: red }";
     const cacheDir = "/tmp/styled-jsx-plugin-postcss";
@@ -163,5 +164,27 @@ describe("styled-jsx-plugin-postcss", () => {
 
     // cleanup
     fs.rmdirSync(cacheDir, { recursive: true });
-  }).timeout(3000);
+  });
+
+  it("perf increase when cacheMem option is true", () => {
+    const input = '@import "./fixture.css"; p { color: red }';
+    const expected = "div { color: red; } p { color: red }";
+    const filename = "madeup.js"; // source file for cache
+
+    let tic = performance.now();
+    assert.strictEqual(
+      plugin(input, { cacheMem: true, babel: { filename } }),
+      expected
+    );
+    const firstPassTime = performance.now() - tic;
+
+    tic = performance.now();
+    assert.strictEqual(
+      plugin(input, { cacheMem: true, babel: { filename } }),
+      expected
+    );
+    const secondPassTime = performance.now() - tic;
+
+    assert(secondPassTime < firstPassTime / 4);
+  });
 });
