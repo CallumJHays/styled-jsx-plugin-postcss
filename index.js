@@ -1,7 +1,23 @@
 const { spawnSync } = require("child_process");
 const path = require("path");
+const crypto = require("crypto");
+const fs = require("fs");
 
 module.exports = function styledJsxPostcssPlugin(css, settings = {}) {
+  let cacheFile;
+  if (settings.cacheDir) {
+    cacheFile = path.join(
+      settings.cacheDir,
+      crypto.createHash("md5").update(css).digest("hex")
+    );
+
+    if (!fs.existsSync(settings.cacheDir)) {
+      fs.mkdir(settings.cacheDir, () => {});
+    } else if (fs.existsSync(cacheFile)) {
+      return fs.readFileSync(cacheFile, "utf8");
+    }
+  }
+
   const cssWithPlaceholders = css.replace(
     /%%styled-jsx-placeholder-(\d+)%%/g,
     (_, id) => `/*%%styled-jsx-placeholder-${id}%%*/`
@@ -52,8 +68,14 @@ module.exports = function styledJsxPostcssPlugin(css, settings = {}) {
     console.warn(maybeWarning);
   }
 
-  return outputCss.replace(
+  const pluginOutput = outputCss.replace(
     /\/\*%%styled-jsx-placeholder-(\d+)%%\*\//g,
     (_, id) => `%%styled-jsx-placeholder-${id}%%`
   );
+
+  if (cacheFile) {
+    fs.writeFileSync(cacheFile, pluginOutput);
+  }
+
+  return pluginOutput;
 };

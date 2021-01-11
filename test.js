@@ -1,5 +1,7 @@
 const assert = require("assert");
 const path = require("path");
+const { performance } = require("perf_hooks");
+const fs = require("fs");
 
 const plugin = require("./");
 const { NEXTJS_UNSUPPORTED_FIELD_WARNING } = require("./processor");
@@ -144,4 +146,22 @@ describe("styled-jsx-plugin-postcss", () => {
     assert(!warned);
     console.warn = oldWarn;
   });
+  it("caches files when cacheDir option is provided", () => {
+    const input = '@import "./fixture.css"; p { color: red }';
+    const expected = "div { color: red; } p { color: red }";
+    const cacheDir = "/tmp/styled-jsx-plugin-postcss";
+
+    let tic = performance.now();
+    assert.strictEqual(plugin(input, { cacheDir }), expected);
+    const firstPassTime = performance.now() - tic;
+
+    tic = performance.now();
+    assert.strictEqual(plugin(input, { cacheDir }), expected);
+    const secondPassTime = performance.now() - tic;
+
+    assert(secondPassTime < firstPassTime / 4);
+
+    // cleanup
+    fs.rmdirSync(cacheDir, { recursive: true });
+  }).timeout(3000);
 });
